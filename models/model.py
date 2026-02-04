@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import joblib
 
 from lightgbm import LGBMClassifier
@@ -15,27 +14,27 @@ from sklearn.metrics import (
     f1_score,
     classification_report,
     roc_auc_score,
-    confusion_matrix
+    confusion_matrix,
 )
 
 # LOAD DATA
-df = pd.read_csv('weatherMelbourne.csv')
+df = pd.read_csv("weatherMelbourne.csv")
 df.columns = df.columns.str.strip()
 
 # TARGET (0 / 1)
-df = df.dropna(subset=['RainTomorrow'])
-y = df['RainTomorrow'].astype(str).str.strip().map({'No': 0, 'Yes': 1})
+df = df.dropna(subset=["RainTomorrow"])
+y = df["RainTomorrow"].astype(str).str.strip().map({"No": 0, "Yes": 1})
 
 mask_ok = ~y.isna()
 df = df.loc[mask_ok].copy()
 y = y.loc[mask_ok].astype(int)
 
 # FEATURES
-X = df.drop(columns=['RainTomorrow'])
+X = df.drop(columns=["RainTomorrow"])
 
 # usuń Date (zalecane)
-if 'Date' in X.columns:
-    X = X.drop(columns=['Date'])
+if "Date" in X.columns:
+    X = X.drop(columns=["Date"])
 
 # SPLIT
 X_train, X_test, y_train, y_test = train_test_split(
@@ -47,45 +46,48 @@ scale_pos_weight = (y_train == 0).sum() / (y_train == 1).sum()
 print(f"Calculated scale_pos_weight: {scale_pos_weight:.2f}")
 
 # PREPROCESSING (w pipeline)
-categorical_features = X_train.select_dtypes(include=['object']).columns.tolist()
-numerical_features = X_train.select_dtypes(exclude=['object']).columns.tolist()
+categorical_features = X_train.select_dtypes(include=["object"]).columns.tolist()
+numerical_features = X_train.select_dtypes(exclude=["object"]).columns.tolist()
 
-categorical_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='most_frequent')),
-    ('onehot', OneHotEncoder(handle_unknown='ignore'))
-])
+categorical_transformer = Pipeline(
+    steps=[
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("onehot", OneHotEncoder(handle_unknown="ignore")),
+    ]
+)
 
-numerical_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='median'))
-])
+numerical_transformer = Pipeline(steps=[("imputer", SimpleImputer(strategy="median"))])
 
 preprocessor = ColumnTransformer(
     transformers=[
-        ('cat', categorical_transformer, categorical_features),
-        ('num', numerical_transformer, numerical_features)
+        ("cat", categorical_transformer, categorical_features),
+        ("num", numerical_transformer, numerical_features),
     ]
 )
 
 # PIPELINE: preprocessor + model
-pipeline = Pipeline(steps=[
-    ('preprocessor', preprocessor),
-    ('model', LGBMClassifier(
-        objective='binary',
-        random_state=42,
-        scale_pos_weight=scale_pos_weight
-    ))
-])
+pipeline = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        (
+            "model",
+            LGBMClassifier(
+                objective="binary", random_state=42, scale_pos_weight=scale_pos_weight
+            ),
+        ),
+    ]
+)
 
 # GRID SEARCH
 # (celowy "BŁĄD": cv=100 - jak w zadaniu)
-custom_f1_scorer = make_scorer(f1_score, pos_label=1, average='binary')
+custom_f1_scorer = make_scorer(f1_score, pos_label=1, average="binary")
 
 param_grid = {
-    'model__n_estimators': [100, 300],
-    'model__learning_rate': [0.01, 0.05, 0.1],
-    'model__num_leaves': [20],
-    'model__max_depth': [7, -1],
-    'model__min_child_samples': [20]
+    "model__n_estimators": [100, 300],
+    "model__learning_rate": [0.01, 0.05, 0.1],
+    "model__num_leaves": [20],
+    "model__max_depth": [7, -1],
+    "model__min_child_samples": [20],
 }
 
 grid_search = GridSearchCV(
@@ -94,11 +96,13 @@ grid_search = GridSearchCV(
     scoring=custom_f1_scorer,
     cv=100,
     verbose=1,
-    n_jobs=-1
+    n_jobs=-1,
 )
 
 print("Starting GridSearchCV fit...")
-grid_search.fit(X_train, y_train)   # UWAGA: SUROWE X_train, pipeline sam zrobi preprocessing
+grid_search.fit(
+    X_train, y_train
+)  # UWAGA: SUROWE X_train, pipeline sam zrobi preprocessing
 print("GridSearchCV fit complete.")
 
 print("\nBest parameters found:")
@@ -120,7 +124,7 @@ print("\n=== Confusion Matrix ===")
 print(confusion_matrix(y_test, y_pred))
 
 # SAVE PIPELINE (model + preprocessing)
-pipeline_filename = 'best_rain_pipeline.joblib'
+pipeline_filename = "best_rain_pipeline.joblib"
 joblib.dump(best_pipeline, pipeline_filename)
 
 print(f"\nBest pipeline saved successfully to {pipeline_filename}")

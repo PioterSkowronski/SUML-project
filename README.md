@@ -1,6 +1,6 @@
-Documentation of IaC and Cloud part
+Documentation of the IaC and cloud components.
 
-We provisioned all resources using Terraform.
+We used Terraform to provision all resources.
 
 Terraform apply outputs:
 
@@ -24,4 +24,4 @@ Final result:
 ![](assets/20260206_102433_image.png)
 
 
-And of course, at the and we did not forget to perform terraform destroye 🎉️
+And, of course, we did not forget to perform Terraform destroy at the end 🎉️
